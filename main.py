@@ -15,7 +15,7 @@ app = FastAPI(title="MyAwesomeApp", openapi_prefix=openapi_prefix) # Here is the
 
 @app.get("/")
 def root():
-    return {"API is running":"aw yeah"}
+    return {"API is running":"aw yeah CICD"}
 
 @app.get("/hello")
 def hello_world():
