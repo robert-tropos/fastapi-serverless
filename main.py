@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI
 from mangum import Mangum
 import boto3
+from uuid import uuid4
 
 # USERS_TABLE = os.environ['USERS_TABLE']
 USERS_TABLE = "test"
@@ -13,52 +14,46 @@ openapi_prefix = f"/{stage}" if stage else "/"
 # app = FastAPI(title="MyAwesomeApp") # Here is the magic
 app = FastAPI(title="MyAwesomeApp", openapi_prefix=openapi_prefix) # Here is the magic
 
-@app.get("/")
+@app.get("/status")
 def root():
-    return {"API is running":"aw yeah CICD"}
+    return {"status": "I am alive!"}
 
-@app.get("/hello")
-def hello_world():
-    return {"message": "Hello World"}
+@app.post("/add_quote/{password}/{quote_msg}")
+def add_new_quote(quote_msg, password):
 
-@app.post("/post/{quote_id}")
-def post_quote(quote_id):
-    client.put_item(TableName=USERS_TABLE,
-        Item={
-            'userId': {'S': quote_id},
-            'quote': {'S': 'test_quote'}
-        })
+    if password == "troposiscool":
 
-    return {'msg':"quote added"}
+        quote_id = str(uuid4())
 
-@app.post("/add_quote/{quote_id}/{quote_msg}")
-def add_new_quote(quote_id, quote_msg):
-    client.put_item(TableName=USERS_TABLE,
-        Item={
-            'userId': {'S': quote_id},
-            'quote': {'S': quote_msg}
-        })
+        client.put_item(TableName=USERS_TABLE,
+            Item={
+                'userId': {'S': quote_id},
+                'quote': {'S': quote_msg},
+            })
 
-    return {'msg':"quote added",
-            "userId":quote_id,
-            "quote":quote_msg}
+        return {'msg':"quote added",
+                "quote_id":quote_id,
+                "quote":quote_msg}
+    else:
+        return {"error": "no access for you!"}
 
+@app.get("/")
+def get_random_quote():
+    db = boto3.resource('dynamodb')
+    table = db.Table('test')
+    response = table.scan(
+        Limit=1,
+        ExclusiveStartKey={
+            'userId': str(uuid4())
+        },
+        ReturnConsumedCapacity='TOTAL'
+    )
+    print(response)
+    if response["Items"]:
+        return {"quote":response["Items"][0]["quote"]}
 
-@app.get("/get/{quote_id}")
-def post_quote(quote_id):
-    resp = client.get_item(TableName=USERS_TABLE,
-        Key={
-            'userId': {'S': quote_id},
-        })
-
-    item = resp.get("Item")
-    if not item:
-        return {"error":"quote doesn't exist"}
-    
-    return {
-        "quote_id_retrieved": item.get('userId').get('S'),
-        "quote_retrieved": item.get('quote').get('S'),
-        }
+    else:
+        return {"quote":"I'm having trouble finding random quotes - AWS lambda"}
 
 
 handler = Mangum(app)
