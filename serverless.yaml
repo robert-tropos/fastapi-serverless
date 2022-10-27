@@ -29,6 +29,7 @@ custom:
   # tableName: 'users-table-${self:provider.stage}'
   tableName: 'test'
   pythonRequirements:
+    pythonBin: python3
     dockerizePip: false
     layer:
       name: my-awesome-app-layer
