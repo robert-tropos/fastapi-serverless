@@ -1,0 +1,77 @@
+service: my-awesome-app
+
+package:
+  individually: true
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: eu-west-1
+  stage: ${opt:stage, "dev"}
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - dynamodb:Query
+      - dynamodb:Scan
+      - dynamodb:GetItem
+      - dynamodb:PutItem
+      - dynamodb:UpdateItem
+      - dynamodb:DeleteItem
+    Resource:
+      - { "Fn::GetAtt": ["UsersDynamoDBTable", "Arn" ] }
+environment:
+  USERS_TABLE: ${self:custom.tableName}
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  # tableName: 'users-table-${self:provider.stage}'
+  tableName: 'test'
+  pythonRequirements:
+    dockerizePip: true
+    layer:
+      name: my-awesome-app-layer
+      description: My awesome app layer
+      compatibleRuntimes:
+        - python3.8
+
+functions:
+  app:
+    package:
+      include:
+        - "main.py"
+      exclude:
+        - "requirements.txt"
+        - "package.json"
+        - "package-lock.json"
+        - ".serverless/**"
+        - ".virtualenv/**"
+        - "node_modules/**"
+
+    handler: main.handler
+    environment:
+      STAGE: ${self:provider.stage}
+    layers:
+      - { Ref: PythonRequirementsLambdaLayer }
+    events:
+      - http: ANY /
+      - http: 'ANY {proxy+}'
+
+resources:
+  Resources:
+    UsersDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: userId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.tableName}
