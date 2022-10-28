@@ -16,7 +16,7 @@ app = FastAPI(title="MyAwesomeApp", openapi_prefix=openapi_prefix) # Here is the
 
 @app.get("/status")
 def root():
-    return {"status": "I am alive!"}
+    return {"status": "I am alive CICD!"}
 
 @app.post("/add_quote/{password}/{quote_msg}")
 def add_new_quote(quote_msg, password):
